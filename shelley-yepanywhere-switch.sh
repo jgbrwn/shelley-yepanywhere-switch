@@ -14,7 +14,7 @@ set -Eeuo pipefail
 #         from the latest relevant Shelley conversation
 #   - On -stop:
 #       * stop yepanywhere as the regular user
-#       * start shelley (via sudo systemctl)
+#       * start shelley and shelley.socket (via sudo systemctl)
 #
 # Design:
 #   - Shelley conversation discovery is project-aware via conversations.cwd
@@ -169,7 +169,7 @@ ERROR: sudo access is required for controlling the shelley service.
 
 This script only uses sudo for:
   - systemctl stop shelley shelley.socket
-  - systemctl start shelley
+  - systemctl start shelley shelley.socket
 
 Run a sudo command manually first to refresh your sudo timestamp,
 or configure sudo access for this user.
@@ -217,7 +217,7 @@ stop_shelley() {
 
 start_shelley() {
   log "Starting shelley..."
-  sudo systemctl start shelley
+  sudo systemctl start shelley shelley.socket
 }
 
 stop_yepanywhere() {
