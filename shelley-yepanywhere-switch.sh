@@ -504,14 +504,19 @@ run_codex_bootstrap_tmux() {
   tmux_session_name="codex-bootstrap-$(basename "${PROJECT_DIR}")-$(date +%s)"
 
   write_bootstrap_prompt
-
   : > "${BOOTSTRAP_OUTPUT}"
 
-  (
-    cd "${PROJECT_DIR}"
-    tmux new-session -d -s "${tmux_session_name}" \
-      "cd '${PROJECT_DIR}' && codex \"\$(cat '${BOOTSTRAP_PROMPT_FILE}')\" | tee -a '${BOOTSTRAP_OUTPUT}'"
-  )
+  local project_dir_q prompt_file_q output_file_q cmd
+  printf -v project_dir_q '%q' "${PROJECT_DIR}"
+  printf -v prompt_file_q '%q' "${BOOTSTRAP_PROMPT_FILE}"
+  printf -v output_file_q '%q' "${BOOTSTRAP_OUTPUT}"
+
+  cmd="bash -lc 'cd ${project_dir_q} && codex \"\$(cat ${prompt_file_q})\"; rc=\$?; echo; echo \"[codex exited with status \$rc]\"; exec bash'"
+
+  tmux new-session -d -s "${tmux_session_name}" "${cmd}"
+
+  # Capture pane output to file without breaking Codex's TTY
+  tmux pipe-pane -o -t "${tmux_session_name}:0.0" "cat >> ${output_file_q}"
 
   sleep 2
 
