@@ -38,7 +38,8 @@ When bootstrap runs, the script creates:
 
 TIP: install nodeenv (only needs done once) and then source it before running the script:
 
-```uvx nodeenv -n lts ./node_env
+```bash
+uvx nodeenv -n lts ./node_env
 source ./node_env/bin/activate
 ```
 
