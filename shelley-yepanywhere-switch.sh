@@ -7,7 +7,7 @@ set -Eeuo pipefail
 # Purpose:
 #   - Install/update yepanywhere
 #   - On -start:
-#       * stop shelley (via sudo systemctl)
+#       * stop shelley and shelley.socket (via sudo systemctl)
 #       * verify port is free
 #       * start yepanywhere on port 9999 as the regular user
 #       * if needed, bootstrap a new Codex conversation for the current project
@@ -52,7 +52,7 @@ Usage:
   $0 -stop  [options]
 
 Actions:
-  -start                  Stop shelley, install/update yepanywhere, start yepanywhere on port ${PORT},
+  -start                  Stop shelley/shelley.socket, install/update yepanywhere, start yepanywhere on port ${PORT},
                           and bootstrap a Codex session from Shelley if needed.
   -stop                   Stop yepanywhere and start shelley.
 
@@ -168,7 +168,7 @@ require_sudo_for_systemctl() {
 ERROR: sudo access is required for controlling the shelley service.
 
 This script only uses sudo for:
-  - systemctl stop shelley
+  - systemctl stop shelley shelley.socket
   - systemctl start shelley
 
 Run a sudo command manually first to refresh your sudo timestamp,
@@ -209,7 +209,7 @@ install_or_update_yepanywhere() {
 stop_shelley() {
   if systemctl is-active --quiet shelley; then
     log "Stopping shelley..."
-    sudo systemctl stop shelley
+    sudo systemctl stop shelley shelley.socket
   else
     log "shelley already stopped"
   fi
