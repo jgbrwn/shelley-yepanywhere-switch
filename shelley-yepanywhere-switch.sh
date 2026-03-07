@@ -19,7 +19,8 @@ set -Eeuo pipefail
 # Design:
 #   - Shelley conversation discovery is project-aware via conversations.cwd
 #   - Bootstrap is idempotent via a project-local marker file
-#   - Bootstrap uses a generated handoff file + codex exec prompt
+#   - Bootstrap uses a generated handoff file + Codex prompt
+#   - Bootstrap runs as a detached interactive Codex session in tmux
 #   - We do NOT try to mutate Codex session files directly
 #   - Only systemctl operations use sudo
 ###############################################################################
@@ -44,6 +45,7 @@ HANDOFF_JSONL=""
 BOOTSTRAP_OUTPUT=""
 BOOTSTRAP_MARKER=""
 BOOTSTRAP_META=""
+BOOTSTRAP_PROMPT_FILE=""
 
 usage() {
   cat <<EOF
@@ -101,6 +103,7 @@ setup_paths() {
   BOOTSTRAP_OUTPUT="${STATE_DIR}/codex-bootstrap-output.txt"
   BOOTSTRAP_MARKER="${STATE_DIR}/shelley-bootstrap.done"
   BOOTSTRAP_META="${STATE_DIR}/shelley-bootstrap.meta"
+  BOOTSTRAP_PROMPT_FILE="${STATE_DIR}/bootstrap-prompt.txt"
 }
 
 parse_args() {
@@ -293,7 +296,7 @@ start_yepanywhere() {
 
   touch "${LOGFILE}"
 
-  nohup env PORT="${PORT}" ALLOWED_HOSTS=$(hostname -s).shelley.exe.xyz yepanywhere --host 0.0.0.0 >> "${LOGFILE}" 2>&1 &
+  nohup env PORT="${PORT}" ALLOWED_HOSTS="$(hostname -s).shelley.exe.xyz" yepanywhere --host 0.0.0.0 >> "${LOGFILE}" 2>&1 &
   echo $! > "${PIDFILE}"
   sleep 3
 
@@ -320,6 +323,10 @@ validate_start_requirements() {
     require_cmd codex
     [[ -n "${SHELLEY_DB}" ]] || die "--shelley-db is required for bootstrap mode ${BOOTSTRAP_MODE}"
     [[ -f "${SHELLEY_DB}" ]] || die "Shelley DB not found: ${SHELLEY_DB}"
+
+    if [[ "${BOOTSTRAP_MODE}" == "exec" ]]; then
+      require_cmd tmux
+    fi
   fi
 }
 
@@ -466,24 +473,15 @@ Your goals:
 ${rendered_transcript}
 EOF
 
-  cat > "${BOOTSTRAP_META}" <<EOF
-conversation_id=${conv_id}
-project_dir=${PROJECT_DIR}
-generated_at=$(date -Is)
-max_messages=${MAX_MESSAGES}
-EOF
-
   log "Wrote handoff markdown: ${HANDOFF_MD}"
   log "Wrote raw handoff JSONL: ${HANDOFF_JSONL}"
   return 0
 }
 
-run_codex_bootstrap_exec() {
-  log "Creating bootstrap Codex session with codex exec..."
+write_bootstrap_prompt() {
+  mkdir -p "${STATE_DIR}"
 
-  local prompt
-  prompt=$(
-    cat <<EOF
+  cat > "${BOOTSTRAP_PROMPT_FILE}" <<EOF
 Read ${STATE_DIR_REL}/shelley-bootstrap.md completely, and inspect ${STATE_DIR_REL}/shelley-bootstrap.jsonl if needed.
 
 This repository was previously worked on in Shelley. The handoff file contains the prior conversation context for this same project.
@@ -495,42 +493,64 @@ Your task:
 - propose the single best immediate next action
 - do not make code changes yet unless they are strictly necessary for understanding the repo
 
-Write a concise but useful continuation summary.
+Write a concise but useful continuation summary, then remain available in this same session for follow-up work.
 EOF
-  )
+}
+
+run_codex_bootstrap_tmux() {
+  log "Creating bootstrap Codex session in detached tmux..."
+
+  local tmux_session_name
+  tmux_session_name="codex-bootstrap-$(basename "${PROJECT_DIR}")-$(date +%s)"
+
+  write_bootstrap_prompt
+
+  : > "${BOOTSTRAP_OUTPUT}"
 
   (
     cd "${PROJECT_DIR}"
-    codex exec "${prompt}"
-  ) | tee "${BOOTSTRAP_OUTPUT}"
+    tmux new-session -d -s "${tmux_session_name}" \
+      "cd '${PROJECT_DIR}' && codex \"\$(cat '${BOOTSTRAP_PROMPT_FILE}')\" | tee -a '${BOOTSTRAP_OUTPUT}'"
+  )
+
+  sleep 2
+
+  if ! tmux has-session -t "${tmux_session_name}" 2>/dev/null; then
+    die "Failed to create detached tmux bootstrap session: ${tmux_session_name}"
+  fi
+
+  cat > "${BOOTSTRAP_META}" <<EOF
+project_dir=${PROJECT_DIR}
+generated_at=$(date -Is)
+max_messages=${MAX_MESSAGES}
+tmux_session_name=${tmux_session_name}
+bootstrap_mode=exec
+EOF
 
   touch "${BOOTSTRAP_MARKER}"
-  log "Bootstrap Codex session created."
-  log "Output saved to ${BOOTSTRAP_OUTPUT}"
+
+  log "Bootstrap Codex tmux session created: ${tmux_session_name}"
+  log "Prompt file: ${BOOTSTRAP_PROMPT_FILE}"
+  log "Output file: ${BOOTSTRAP_OUTPUT}"
 }
 
 run_codex_bootstrap_interactive() {
   log "Starting interactive Codex bootstrap session..."
 
-  local prompt
-  prompt=$(
-    cat <<EOF
-Read ${STATE_DIR_REL}/shelley-bootstrap.md completely, and inspect ${STATE_DIR_REL}/shelley-bootstrap.jsonl if needed.
+  write_bootstrap_prompt
 
-This repository was previously worked on in Shelley. The handoff file contains the prior conversation context for this same project.
-
-Please:
-- absorb the prior Shelley context
-- restate current project state
-- identify unresolved issues and immediate next steps
-- continue from there without repeating settled work
+  cat > "${BOOTSTRAP_META}" <<EOF
+project_dir=${PROJECT_DIR}
+generated_at=$(date -Is)
+max_messages=${MAX_MESSAGES}
+bootstrap_mode=interactive
 EOF
-  )
 
   touch "${BOOTSTRAP_MARKER}"
+
   (
     cd "${PROJECT_DIR}"
-    exec codex "${prompt}"
+    exec codex "$(cat "${BOOTSTRAP_PROMPT_FILE}")"
   )
 }
 
@@ -553,7 +573,7 @@ maybe_bootstrap_codex_from_shelley() {
 
   case "${BOOTSTRAP_MODE}" in
     exec)
-      run_codex_bootstrap_exec
+      run_codex_bootstrap_tmux
       ;;
     interactive)
       run_codex_bootstrap_interactive
