@@ -296,7 +296,7 @@ start_yepanywhere() {
 
   touch "${LOGFILE}"
 
-  nohup env PORT="${PORT}" ALLOWED_HOSTS="$(hostname -s).shelley.exe.xyz" yepanywhere --host 0.0.0.0 >> "${LOGFILE}" 2>&1 &
+  nohup env PORT="${PORT}" ALLOWED_HOSTS="$(hostname -s).shelley.exe.xyz" yepanywhere >> "${LOGFILE}" 2>&1 &
   echo $! > "${PIDFILE}"
   sleep 3
 
