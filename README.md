@@ -1,6 +1,6 @@
 # shelley-yepanywhere-switch
 
-A Bash controller script for switching an exe.dev VM between **Shelley** and **yepanywhere + Codex CLI** on the same port.
+A Bash controller script for switching an [exe.dev](https://exe.dev) VM between [Shelley](https://github.com/boldsoftware/shelley) and [yepanywhere](https://github.com/kzahel/yepanywhere) + Codex CLI on the same port.
 
 ---
 
@@ -150,6 +150,25 @@ source ./node_env/bin/activate
 
 ---
 
+> **TIP: Configure Codex project trust before running**
+>
+> When the script launches a Codex bootstrap session inside tmux, Codex may pause and wait for you to manually approve the project directory as trusted — which means you'd have to attach to the tmux session yourself just to nudge it along.
+>
+> To avoid this, add your project path to Codex's trusted projects list **before** running the script.
+>
+> Edit `~/.codex/config.toml` and add the project path under `approved_api_base_urls` — or more specifically, add it to the `trusted_projects` list:
+>
+> ```toml
+> # ~/.codex/config.toml
+> trusted_projects = [
+>   "/home/exedev/myproject"
+> ]
+> ```
+>
+> Replace `/home/exedev/myproject` with the actual path you will pass to `--project-dir`. This allows Codex to start unattended inside the tmux session without requiring manual confirmation.
+
+---
+
 ## Start yepanywhere and bootstrap from Shelley
 
 ```bash
@@ -242,7 +261,6 @@ For port checks, at least one of:
 ```
 ~/.cache/shelley-yepanywhere-switch/
 ```
-
 - The shared port between Shelley and yepanywhere is:
 
 ```
