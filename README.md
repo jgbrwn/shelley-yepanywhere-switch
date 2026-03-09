@@ -4,6 +4,26 @@ A Bash controller script for switching an [exe.dev](https://exe.dev) VM between 
 
 ---
 
+# Known Issue: Bootstrap session not visible in YepAnywhere Sessions tab
+
+> **Status: Upstream bug in yepanywhere — workaround available**
+
+The bootstrap Codex session launched by this script is visible as an artifact in the YepAnywhere web UI, but clicking into the Sessions tab shows nothing. This appears to affect even yepanywhere-native Codex sessions (not just ones launched via this script), so it is likely a bug in yepanywhere itself. [A related issue has been reopened in the yepanywhere repo](https://github.com/kzahel/yepanywhere/issues).
+
+The yepanywhere developer has indicated a new npm release is expected shortly that should fix the Codex sessions not showing up.
+
+## Workaround
+
+Until a fixed yepanywhere release is available:
+
+1. In the YepAnywhere web UI, open the **Project** that corresponds to your repo
+2. Start a **new yepanywhere/Codex chat** inside that Project
+3. In the chat, prompt Codex to examine the files in `.codex-handoff/` to get up to speed on the current state of the project
+
+This gives you a functional Codex session with full project context, even without being able to click directly into the bootstrap session.
+
+---
+
 # Purpose
 
 This script supports a workflow where:
@@ -205,6 +225,18 @@ source ./node_env/bin/activate
 ```bash
 ./shelley-yepanywhere-switch.sh -stop
 ```
+
+---
+
+> **TIP: Delete `.codex-handoff/` after significant progress**
+>
+> After you have made a lot of changes in your yepanywhere/Codex session, delete the `.codex-handoff/` directory before starting a new conversation. The handoff files reflect the state of the project at the time of the original Shelley bootstrap — if left in place, they may provide stale or misleading context to subsequent Codex sessions.
+>
+> ```bash
+> rm -rf /home/exedev/myproject/.codex-handoff
+> ```
+>
+> Replace `/home/exedev/myproject` with your actual project path. The directory will be recreated fresh the next time you run the script with bootstrap enabled.
 
 ---
 
