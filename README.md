@@ -22,6 +22,10 @@ Until a fixed yepanywhere release is available:
 
 This gives you a functional Codex session with full project context, even without being able to click directly into the bootstrap session.
 
+> **⚠️ Save the session URL immediately after opening it**
+>
+> Due to this bug, once you navigate away from the session, you will **not be able to find it again** through the YepAnywhere web UI or the standard Sessions listing. As soon as the new chat session opens in your browser, copy and save the full URL somewhere (a note, your terminal, etc.) so you can return to it directly if needed.
+
 ---
 
 # Purpose
@@ -175,7 +179,6 @@ source ./node_env/bin/activate
 > When the script launches a Codex bootstrap session inside tmux, Codex may pause and wait for you to manually approve the project directory as trusted — which means you'd have to attach to the tmux session yourself just to nudge it along.
 >
 > To avoid this, add your project path to Codex's trusted projects list **before** running the script.
->
 > Edit `~/.codex/config.toml` and add the project path under `approved_api_base_urls` — or more specifically, add it to the `trusted_projects` list:
 >
 > ```toml
