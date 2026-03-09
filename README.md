@@ -26,6 +26,10 @@ This gives you a functional Codex session with full project context, even withou
 >
 > Due to this bug, once you navigate away from the session, you will **not be able to find it again** through the YepAnywhere web UI or the standard Sessions listing. As soon as the new chat session opens in your browser, copy and save the full URL somewhere (a note, your terminal, etc.) so you can return to it directly if needed.
 
+### YepAnywhere Web UI Example
+
+![YepAnywhere Web UI with Codex Session](docs/images/yepanywhere-webui.png)
+
 ---
 
 # Purpose
@@ -180,15 +184,28 @@ source ./node_env/bin/activate
 >
 > To avoid this, add your project path to Codex's trusted projects list **before** running the script.
 > Edit `~/.codex/config.toml` and add the project path under `approved_api_base_urls` — or more specifically, add it to the `trusted_projects` list:
->
+> 
 > ```toml
 > # ~/.codex/config.toml
 > trusted_projects = [
 >   "/home/exedev/myproject"
 > ]
 > ```
->
 > Replace `/home/exedev/myproject` with the actual path you will pass to `--project-dir`. This allows Codex to start unattended inside the tmux session without requiring manual confirmation.
+
+---
+
+## Bootstrap Example
+
+When you run the script with bootstrap enabled, it extracts the latest Shelley conversation and initializes a new Codex session. Here's what the bootstrap process looks like:
+
+**Step 1: Bootstrap initialization and context absorption**
+
+![Bootstrap Stage 1 - Context Absorption](docs/images/bootstrap-1.png)
+
+**Step 2: Bootstrap completion and session ready**
+
+![Bootstrap Stage 2 - Session Ready](docs/images/bootstrap-2.png)
 
 ---
 
@@ -238,7 +255,6 @@ source ./node_env/bin/activate
 > ```bash
 > rm -rf /home/exedev/myproject/.codex-handoff
 > ```
->
 > Replace `/home/exedev/myproject` with your actual project path. The directory will be recreated fresh the next time you run the script with bootstrap enabled.
 
 ---
